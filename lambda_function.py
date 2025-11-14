@@ -40,6 +40,27 @@ def listar_cidades(limit: int = 100):
     return cidades
 
 
+@app.get("/autocompletar")
+def autocompletar_cidades(q: str, limit: int = 10):
+    """Autocompleta nomes de cidades com base na consulta"""
+
+    # Requer no mínimo 3 caracteres para busca
+    if len(q) < 3:
+        return {"total": 0, "cidades": []}
+
+    conn = utils.connectar_db()
+    cursor = conn.cursor()
+
+    # Normaliza consulta do usuário
+    q_norm = utils.normaliza_string(q)
+    # Busca usando a coluna normalizada (prefix match)
+    sql = f"SELECT Nome_Município, UF FROM {TABLE_NAME} WHERE nome_normalizado LIKE ? ORDER BY nome_normalizado ASC LIMIT ?"
+    cursor.execute(sql, (f"{q_norm}%", limit))
+    cidades = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return {"total": len(cidades), "cidades": cidades}
+
+
 def handler(event, context):
     """
     AWS Lambda handler
